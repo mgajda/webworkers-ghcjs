@@ -1,3 +1,3 @@
-# webworker
+# webworker-ghcjs
 
-add description of webworker here
+`./bootstrap.sh` to setup ghcjs. Then you can do `stack build`'

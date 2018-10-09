@@ -1,0 +1,17 @@
+<html>
+<head>
+<script>
+if ('serviceWorker' in navigator) {
+  // Register a service worker hosted at the root of the
+  // site using the default scope.
+  navigator.serviceWorker.register("../.stack-work/dist/x86_64-linux/Cabal-1.24.2.0_ghcjs/build/webworker-output/webworker-output.jsexe/all.js").then(function(registration) {
+    console.log('Service worker registration succeeded:', registration);
+  }, /*catch*/ function(error) {
+    console.log('Service worker registration failed:', error);
+  });
+} else {
+  console.log('Service workers are not supported.');
+}
+</script>
+</head>
+</html>

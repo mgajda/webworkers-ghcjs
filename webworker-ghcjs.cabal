@@ -1,4 +1,4 @@
-name:                webworker
+name:                webworker-ghcjs
 version:             0.1.0.0
 -- synopsis:
 -- description:
@@ -13,24 +13,15 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
-library
-  hs-source-dirs:      src
-  ghc-options:         -Wall
-  exposed-modules:     Lib
-  build-depends:       base >= 4.7 && < 5
-                     , ghcjs-base
-                     , ghcjs-dom
-  default-language:    Haskell2010
-
-executable webworker-output
+executable webworker-ghcjs
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -Wall
   build-depends:       base
                      , ghcjs-base
-                     , webworker
+                     , ghcjs-dom
   default-language:    Haskell2010
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/webworker
+  location: https://github.com/balajirrao/webworker-ghcjs

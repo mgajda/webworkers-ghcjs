@@ -1,5 +1,5 @@
 var request = new XMLHttpRequest();
-request.open('GET', "/html/test.html");
+request.open('GET', "/html/all.js");
 request.responseType = 'blob';
 
 request.onload = function() {

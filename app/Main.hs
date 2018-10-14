@@ -24,10 +24,14 @@ foreign import javascript unsafe "$1.fetch($2)" myFetch :: WorkerGlobalScope -> 
 installHandler :: Event -> IO ()
 installHandler e = console_log "Installed! Wow"
 
+-- TODO: Request routing logic
+routeRequest :: Request -> Request
+routeRequest = id
+
 fetchHandler :: Event -> IO ()
 fetchHandler e = do
   console_log "Fetching.."
-  resp <- (myFetch (self 0) (getRequest e))
+  resp <- (myFetch (self 0) (routeRequest $ getRequest e))
   respondWith e resp
 
 main :: IO ()

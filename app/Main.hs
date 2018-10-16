@@ -22,14 +22,11 @@ foreign import javascript unsafe "$1.respondWith($2)" respondWith :: Event -> Pr
 foreign import javascript unsafe "$1.request" getRequest :: Event -> Request
 foreign import javascript unsafe "$1.fetch($2)" fetch :: WorkerGlobalScope -> Request -> IO Promise
 
-installHandler :: Event -> IO ()
-installHandler e = console_log "Installed service worker!"
-
 -- TODO: Request routing logic
 routeRequest :: Request -> Request
 routeRequest = id
 
-fetchHandler :: Event -> IO ()
+fetchHandler :: Event -> IO()
 fetchHandler e = do
   self <- getSelf
   console_log "Fetching.."
@@ -37,12 +34,4 @@ fetchHandler e = do
   respondWith e resp
 
 main :: IO ()
-main =  do
-  self <- getSelf;
-  il <- eventListenerNew installHandler
-  addEventListener self ("install" :: String) (Just il) False
-
-  fl <- eventListenerNewSync fetchHandler
-  addEventListener self ("fetch" :: String) (Just fl) True
-
-
+main = console_log "Dummy main"

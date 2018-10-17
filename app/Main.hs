@@ -33,7 +33,7 @@ routeRequest r = do
   cfip <- (get h ("cf-connecting-ip" :: String)) :: IO (Maybe String)
   case cfip of
     Nothing -> return r
-    Just t  -> 
+    Just t  -> return r
 
 fetchHandler :: Event -> IO()
 fetchHandler e = do

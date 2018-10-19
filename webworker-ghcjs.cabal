@@ -20,6 +20,10 @@ executable webworker-ghcjs
   build-depends:       base
                      , ghcjs-base
                      , ghcjs-dom
+                     , unordered-containers
+                     , aeson
+                     , file-embed
+                     , template-haskell
   default-language:    Haskell2010
 
 source-repository head

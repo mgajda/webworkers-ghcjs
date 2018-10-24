@@ -15,7 +15,7 @@ import GHCJS.DOM.WorkerGlobalScope (WorkerGlobalScope)
 import GHCJS.DOM.Request
 import GHCJS.DOM.Headers
 
-import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HM
 
 import Data.FileEmbed
 import GHC.Generics
@@ -31,16 +31,21 @@ foreign import javascript unsafe "console.log($1)" console_log :: JSString -> IO
 
 newtype Promise = Promise JSVal
 
-foreign import javascript safe "$r = $1[$2]" lookup :: JSVal -> JSVal -> Nullable JSVal
 foreign import javascript unsafe "$1.respondWith($2)" respondWith :: Event -> Promise -> IO ()
 foreign import javascript unsafe "$1.request" getRequest :: Event -> Request
 foreign import javascript unsafe "$1.fetch($2)" fetch :: WorkerGlobalScope -> Request -> IO Promise
 
-type OctetMap a = HashMap String (Either a String)
-type ServerMap = OctetMap (OctetMap (OctetMap (HashMap String String)))
+type OctetMap a = HM.HashMap String (Either String a)
+type ServerMap = OctetMap (OctetMap (OctetMap (HM.HashMap String String)))
 
 serverMap :: ServerMap
 serverMap = ((either error id) . (parseEither parseJSON)) $ $(embedStringFile "config/server_map.json")
+
+lookupServer :: [String] -> ServerMap -> Maybe String
+lookupServer [a, b, c, d] sm = f a (f b (f c (HM.lookup d))) sm
+  where
+    f x c m = maybe Nothing (either return c) (HM.lookup x m)
+lookupServer _ _ = Nothing
 
 -- TODO: Request routing logic
 routeRequest :: Request -> IO Request

@@ -47,6 +47,13 @@ lookupServer [a, b, c, d] sm = f a (f b (f c (HM.lookup d))) sm
     f x c m = maybe Nothing (either return c) (HM.lookup x m)
 lookupServer _ _ = Nothing
 
+splitIp :: String -> [String]
+splitIp = foldr go [""]
+  where
+    go '.' acc = "" : acc
+    go c (x : xs) = (c : x) : xs
+
+
 -- TODO: Request routing logic
 routeRequest :: Request -> IO Request
 routeRequest r = do

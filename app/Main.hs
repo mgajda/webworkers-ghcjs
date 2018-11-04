@@ -1,39 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
 import Data.JSString (JSString)
 import GHCJS.Types
 import GHCJS.DOM.Types (JSM, Request, toJSVal, Nullable)
-import GHCJS.DOM.EventTarget
-import GHCJS.DOM.Event
-import GHCJS.DOM.EventTargetClosures
 import GHCJS.DOM.Response (Response)
-import GHCJS.DOM.WorkerGlobalScope (WorkerGlobalScope)
+import GHCJS.DOM.WorkerGlobalScope (WorkerGlobalScope, fetch)
 import GHCJS.DOM.Request
 import GHCJS.DOM.Headers
 
 import qualified Data.HashMap.Strict as HM
 
 import Data.FileEmbed
-import GHC.Generics
 import Data.Aeson
 import Data.Aeson.Types (parseEither)
 import Data.Either (either)
 import Language.Haskell.TH
 import Data.List
+import Control.Monad.IO.Class (MonadIO)
 
-foreign import javascript safe "$r = self" getSelf :: IO WorkerGlobalScope
+import GHCJS.DOM.WebWorker (WebWorkerIO, getSelf, runWebWorkerIOAction)
+import GHCJS.DOM.FetchEvent (FetchEvent, getRequest, respondWith)
+
 foreign import javascript unsafe "window.alert($1)" js_alert :: JSString -> IO ()
 foreign import javascript unsafe "console.log($1)" console_log :: JSString -> IO ()
-
-newtype Promise = Promise JSVal
-
-foreign import javascript unsafe "$1.respondWith($2)" respondWith :: Event -> Promise -> IO ()
-foreign import javascript unsafe "$1.request" getRequest :: Event -> Request
-foreign import javascript unsafe "$1.fetch($2)" fetch :: WorkerGlobalScope -> Request -> IO Promise
 
 type OctetMap a = HM.HashMap String (Either String a)
 type ServerMap = OctetMap (OctetMap (OctetMap (HM.HashMap String String)))
@@ -53,22 +47,21 @@ splitIp = foldr go [""]
     go '.' acc = "" : acc
     go c (x : xs) = (c : x) : xs
 
-
 -- TODO: Request routing logic
-routeRequest :: Request -> IO Request
+routeRequest :: MonadIO m => Request -> m Request
 routeRequest r = do
   h <- getHeaders r
-  cfip <- (get h ("cf-connecting-ip" :: String)) :: IO (Maybe String)
+  cfip <- (get h ("cf-connecting-ip" :: String)) -- ::  IO (Maybe String)
   case cfip of
     Nothing -> return r
-    Just t  -> return r
+    Just (t :: String)  -> return r
 
-fetchHandler :: Event -> IO()
-fetchHandler e = do
+fetchHandler :: FetchEvent -> IO ()
+fetchHandler e = runWebWorkerIOAction $ do
   self <- getSelf
-  console_log "Routing.."
-  r <- routeRequest $ getRequest e
-  resp <- fetch self r
+  req <- getRequest e
+  r <- routeRequest req
+  resp <- fetch self r Nothing
   respondWith e resp
 
 main :: IO ()

@@ -19,13 +19,17 @@ library
   build-depends:     ghcjs-base
                    , ghcjs-dom
                    , base
-  exposed-modules:   GHCJS.DOM.WebWorker
-                   , GHCJS.DOM.FetchEvent
+                   , mtl
+  exposed-modules:   WebWorker.WebWorker
+                   , WebWorker.FetchEvent
+                   , WebWorker.Promise
+                   , WebWorker.Response
   default-language:  Haskell2010
 
 executable webworker-ghcjs
   hs-source-dirs:      app
   main-is:             Main.hs
+  other-modules:       Routing                        
   ghc-options:         -Wall
   build-depends:       base
                      , ghcjs-base

@@ -3,5 +3,5 @@ self.addEventListener('fetch', function(event) {
                      , h$mainZCMainzifetchHandler
                      , h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_e, event)
                    );
-  h$runSync(action);
+  h$runSync(action, true);
 });

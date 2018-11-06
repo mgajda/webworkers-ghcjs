@@ -1,16 +1,18 @@
-var request = new XMLHttpRequest();
-request.open('GET', "/html/all.js");
-request.responseType = 'blob';
+function makeDynamicRequest () {
+  $.ajax({
+    url: "static-dynamic",
+    success: function(result) {
+      $("#dynamic-req-response").html(JSON.stringify(result, null, '\t'));
+    },
+    error: function(xhr) {
+      $("#dynamic-req-response").html("ERROR");
+    }
+  });
 
-request.onload = function() {
-  if (request.status == 200) {
-    console.log("YAY!");
-  } else {
-    console.log("NAY!");
-  }
 
-};
-
-request.onerror = function() {
-  console.log("Error");
+  // fetch("/dynamic").then(function(response) {
+  //   $("dynamic-req-response").html(response.text());
+  // }, function(error) {$("dynamic-req-response").html("ERROR");}).catch(function(error) {
+  //   $("dynamic-req-response").html("ERROR");
+  // });
 };

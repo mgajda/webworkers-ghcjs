@@ -1,68 +1,84 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE JavaScriptFFI #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Main where
 
-import Data.JSString (JSString)
-import GHCJS.Types
-import GHCJS.DOM.Types (JSM, Request, toJSVal, Nullable)
-import GHCJS.DOM.Response (Response)
-import GHCJS.DOM.WorkerGlobalScope (WorkerGlobalScope, fetch)
-import GHCJS.DOM.Request
-import GHCJS.DOM.Headers
+import GHCJS.Types (JSVal)
+import GHCJS.DOM.Types (Request, Headers)
+import GHCJS.DOM.Response (Response(..))
+import GHCJS.DOM.Request (getUrl)
 
-import qualified Data.HashMap.Strict as HM
 
-import Data.FileEmbed
-import Data.Aeson
-import Data.Aeson.Types (parseEither)
-import Data.Either (either)
-import Language.Haskell.TH
-import Data.List
-import Control.Monad.IO.Class (MonadIO)
+import Data.JSString (JSString, splitOn, intercalate)
+import Data.Monoid ((<>))
 
-import GHCJS.DOM.WebWorker (WebWorkerIO, getSelf, runWebWorkerIOAction)
-import GHCJS.DOM.FetchEvent (FetchEvent, getRequest, respondWith)
+import Control.Monad.IO.Class (liftIO)
+
+import WebWorker.WebWorker (WebWorkerIO, getSelf, runWebWorkerIOAction, fetch)
+import WebWorker.FetchEvent (FetchEvent, respondWith, getRequest)
+import WebWorker.Response (text)
+import WebWorker.Promise (promiseGet, runPromiseM)
+
+-- TODO: Enable once request routing is required. Commenting this out
+-- speeds up compilation by not requiring TH
+-- import Routing
 
 foreign import javascript unsafe "window.alert($1)" js_alert :: JSString -> IO ()
 foreign import javascript unsafe "console.log($1)" console_log :: JSString -> IO ()
 
-type OctetMap a = HM.HashMap String (Either String a)
-type ServerMap = OctetMap (OctetMap (OctetMap (HM.HashMap String String)))
+-- TODO: Use the GHCJS.DOM.Request version of newRequest. Make a better version of newHeaders
+foreign import javascript unsafe "new Request($1)" js_newRequest :: JSString -> IO Request
+foreign import javascript unsafe "new Headers($1)" js_newHeaders :: Headers -> IO Headers
 
-serverMap :: ServerMap
-serverMap = ((either error id) . (parseEither parseJSON)) $ $(embedStringFile "config/server_map.json")
+-- TODO: Make a better version of new Response
+foreign import javascript unsafe "new Response($2, {status : $1.status, statusText : $1.statusText, headers : $1.headers})" js_newResponse :: Response -> JSString -> IO JSVal
 
-lookupServer :: [String] -> ServerMap -> Maybe String
-lookupServer [a, b, c, d] sm = f a (f b (f c (HM.lookup d))) sm
-  where
-    f x c m = maybe Nothing (either return c) (HM.lookup x m)
-lookupServer _ _ = Nothing
+splitComponents :: JSString -> Maybe (JSString, JSString)
+splitComponents s = case splitOn "/" s of
+  [] -> Nothing
+  xs -> Just (intercalate "/" $ init xs, last xs)
 
-splitIp :: String -> [String]
-splitIp = foldr go [""]
-  where
-    go '.' acc = "" : acc
-    go c (x : xs) = (c : x) : xs
+dynamicEndpoint :: JSString
+dynamicEndpoint = "https://jsonplaceholder.typicode.com/todos/1"
 
--- TODO: Request routing logic
-routeRequest :: MonadIO m => Request -> m Request
-routeRequest r = do
-  h <- getHeaders r
-  cfip <- (get h ("cf-connecting-ip" :: String)) -- ::  IO (Maybe String)
-  case cfip of
-    Nothing -> return r
-    Just (t :: String)  -> return r
+staticEndpoint :: JSString
+staticEndpoint = "https://jsonplaceholder.typicode.com/posts/1"
+
+dynamicFetchHandler :: FetchEvent -> WebWorkerIO ()
+dynamicFetchHandler e = do
+  self <- getSelf
+  req1 <- liftIO $ js_newRequest staticEndpoint
+  req2 <- liftIO $ js_newRequest dynamicEndpoint
+
+  p1 <- fetch self req1
+  p2 <- fetch self req2
+
+  let p = do
+        resp1 <- promiseGet p1
+        resp2 <- promiseGet p2
+        p3 <- liftIO $ text resp1
+        p4 <- liftIO $ text resp2
+        text1 <- promiseGet p3
+        text2 <- promiseGet p4
+        liftIO $ js_newResponse resp1 ("[" <> text1 <> "," <> text2 <> "]")
+
+  respondWith e =<< (liftIO $ runPromiseM p)
 
 fetchHandler :: FetchEvent -> IO ()
 fetchHandler e = runWebWorkerIOAction $ do
   self <- getSelf
-  req <- getRequest e
-  r <- routeRequest req
-  resp <- fetch self r Nothing
-  respondWith e resp
+  r <- getRequest e
+  -- r <- routeRequest req
+  url <- getUrl r
+  case splitComponents url of
+    Just (_, "static-dynamic") -> dynamicFetchHandler e
+    _ -> respondWith e =<< fetch self r
 
 main :: IO ()
-main = console_log "Dummy main"
+main = console_log ("Dummy main" :: JSString)

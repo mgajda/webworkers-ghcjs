@@ -1,7 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE JavaScriptFFI #-}
 
-module WebWorker.Promise where
+module WebWorker.Promise
+  ( Promise
+  , promiseGet
+  , runPromiseM
+  ) where
 
 import Control.Monad.Cont (ContT(..), runContT)
 

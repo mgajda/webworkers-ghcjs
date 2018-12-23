@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module WebWorker.WebWorker
-  (WebWorkerIO
+  ( WebWorkerIO
   , getSelf
   , runWebWorkerIOAction
   , fetch
@@ -12,7 +12,6 @@ import WebWorker.Promise
 
 import GHCJS.DOM.Response (Response)
 import GHCJS.DOM.Types (Request)
-import GHCJS.Types (JSVal)
 import GHCJS.DOM.WorkerGlobalScope (WorkerGlobalScope)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 

@@ -1,3 +1,4 @@
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +12,6 @@ module Main where
 
 import GHCJS.Types (JSVal)
 import GHCJS.DOM.Types (Request, Headers)
-import GHCJS.DOM.Response (Response(..))
 import GHCJS.DOM.Request (getUrl)
 
 
@@ -23,7 +23,7 @@ import Control.Monad.IO.Class (liftIO)
 import WebWorker.WebWorker (WebWorkerIO, getSelf, runWebWorkerIOAction, fetch)
 import WebWorker.FetchEvent (FetchEvent, respondWith, getRequest)
 import WebWorker.Response (text)
-import WebWorker.Promise (promiseGet, runPromiseM)
+import WebWorker.Promise (Promise, promiseRead, runPromiseM)
 
 -- TODO: Enable once request routing is required. Commenting this out
 -- speeds up compilation by not requiring TH
@@ -37,7 +37,7 @@ foreign import javascript unsafe "new Request($1)" js_newRequest :: JSString -> 
 foreign import javascript unsafe "new Headers($1)" js_newHeaders :: Headers -> IO Headers
 
 -- TODO: Make a better version of new Response
-foreign import javascript unsafe "new Response($2, {status : $1.status, statusText : $1.statusText, headers : $1.headers})" js_newResponse :: Response -> JSString -> IO JSVal
+foreign import javascript unsafe "new Response($1, {headers: {'content-type': 'application/json'}})" js_newJSONResponse :: JSString -> IO JSVal
 
 splitComponents :: JSString -> Maybe (JSString, JSString)
 splitComponents s = case splitOn "/" s of
@@ -50,23 +50,26 @@ dynamicEndpoint = "https://jsonplaceholder.typicode.com/todos/1"
 staticEndpoint :: JSString
 staticEndpoint = "https://jsonplaceholder.typicode.com/posts/1"
 
+httpGet :: JSString -> WebWorkerIO (Promise JSString)
+httpGet url = do
+  self <- getSelf
+  req <- liftIO $ js_newRequest url
+  reqP <- fetch self req
+  let p = do
+        resp <- promiseRead reqP
+        textP <- liftIO $ text resp
+        promiseRead textP
+
+  liftIO $ runPromiseM p
+
 dynamicFetchHandler :: FetchEvent -> WebWorkerIO ()
 dynamicFetchHandler e = do
-  self <- getSelf
-  req1 <- liftIO $ js_newRequest staticEndpoint
-  req2 <- liftIO $ js_newRequest dynamicEndpoint
-
-  p1 <- fetch self req1
-  p2 <- fetch self req2
-
+  p1 <- httpGet staticEndpoint
+  p2 <- httpGet dynamicEndpoint
   let p = do
-        resp1 <- promiseGet p1
-        resp2 <- promiseGet p2
-        p3 <- liftIO $ text resp1
-        p4 <- liftIO $ text resp2
-        text1 <- promiseGet p3
-        text2 <- promiseGet p4
-        liftIO $ js_newResponse resp1 ("[" <> text1 <> "," <> text2 <> "]")
+        text1 <- promiseRead p1
+        text2 <- promiseRead p2
+        liftIO $ js_newJSONResponse ("[" <> text1 <> "," <> text2 <> "]")
 
   respondWith e =<< (liftIO $ runPromiseM p)
 

@@ -3,7 +3,7 @@
 
 module WebWorker.Promise
   ( Promise
-  , promiseGet
+  , promiseRead
   , runPromiseM
   ) where
 
@@ -18,8 +18,8 @@ type PromiseM = ContT JSVal IO
 foreign import javascript safe "$2.then($1)" js_then :: Callback (JSVal -> IO JSVal) -> JSVal -> IO JSVal
 foreign import javascript safe "new Promise(function (resolve, reject) {resolve ($1)})" js_newPromise :: JSVal -> IO JSVal
 
-promiseGet ::(FromJSVal a) => Promise a -> PromiseM a
-promiseGet (Promise jsVal) = ContT $ \f -> do
+promiseRead ::(FromJSVal a) => Promise a -> PromiseM a
+promiseRead (Promise jsVal) = ContT $ \f -> do
   let cbM = syncCallback1' $ \x_js -> do
         x <- fromJSValUnchecked x_js
         ret <- f x
